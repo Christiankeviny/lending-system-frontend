@@ -1,0 +1,201 @@
+const BASE_API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return {
+    "Content-type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
+export const apiCall = async (endpoint, options = {}) => {
+  const url = `${BASE_API_URL}${endpoint}`;
+  const config = {
+    headers: getAuthHeaders(),
+    ...options,
+  };
+
+  try {
+    const response = await fetch(url, config);
+    const text = await response.text();
+    
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (error) {
+      console.error("JSON parse error", error, "Response text", text);
+    }
+    if (!response.ok) {
+        throw new Error(data?.message || `HTTP error! status: ${response.status}`);
+    }
+    return data;
+  } catch (error) {
+    console.error("API call error:", error);
+    throw error;
+  }
+};
+
+export const authAPI = {
+  login: (credentials) =>
+    apiCall("/admin/login", {
+      method: "POST",
+      body: JSON.stringify(credentials),
+    }),
+  forgotPassword: (email) =>
+    apiCall("/admin/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (token, newPassword) =>
+    apiCall("/admin/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, newPassword }),
+    }),
+};
+
+export const dashboardAPI = {
+  getTopLendingItems: () => apiCall("/admin/top-lending-items"),
+  getLowStockItems: () => apiCall("/admin/low-stock-items"),
+  getInventoryData: (page = 1, limit = 10) =>
+    apiCall(`/admin/inventory?page=${page}&limit=${limit}`),
+  getInventorySummary: () => apiCall("/admin/inventory-summary"),
+  getClassesOverview: () => apiCall("/admin/classes-overview"),
+  getClassesTable: (page = 1, limit = 10) =>
+    apiCall(`/admin/classes-table?page=${page}&limit=${limit}`),
+  getCurrentLoans: () => apiCall("/admin/current-loans"),
+  getHistoryLog: (page = 1, limit = 10) =>
+    apiCall(`/admin/history-log?page=${page}&limit=${limit}`),
+  importMahasiswa: (formData) => {
+    const token = localStorage.getItem("token");
+    return fetch(`${BASE_API_URL}/admin/import-excel`, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    }).then((response) => {
+      if (!response.ok) {
+        return response.json().then((data) => {
+          throw new Error(
+            data.message || `HTTP error! status: ${response.status}`
+          );
+        });
+      }
+      return response.json();
+    });
+  },
+  returnItemByTransaction: (transactionId, notes) =>
+    apiCall("/admin/return-item-by-transaction", {
+      method: "POST",
+      body: JSON.stringify({ transactionId, notes }),
+    }),
+  returnItemByBarcode: (barcode, notes) => {
+    const token = localStorage.getItem("token");
+    return fetch(`${BASE_API_URL}/borrow/return-by-barcode`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ barcode, notes }),
+    }).then((response) => {
+      if (!response.ok) {
+        return response.json().then((data) => {
+          throw new Error(
+            data.message || `HTTP error! status: ${response.status}`
+          );
+        });
+      }
+      return response.json();
+    });
+  },
+};
+
+export const borrowAPI = {
+  submitRequest: (requestData) =>
+    apiCall("/borrow/request", {
+      method: "POST",
+      body: JSON.stringify(requestData),
+    }),
+
+  getPendingRequests: () => apiCall("/borrow/pending-requests"),
+
+  scanBarcode: (barcode) => apiCall(`/borrow/scan/${barcode}`),
+
+  acceptRequest: (transactionId) =>
+    apiCall(`/borrow/accept/${transactionId}`, {
+      method: "PUT",
+    }),
+
+  completeTransaction: (transactionId, data) =>
+    apiCall(`/borrow/complete/${transactionId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  rejectRequest: (transactionId, reason) =>
+    apiCall(`/borrow/reject/${transactionId}`, {
+      method: "PUT",
+      body: JSON.stringify({ alasan_penolakan: reason }),
+    }),
+
+  directLending: (lendingData) =>
+    apiCall("/borrow/direct-lending", {
+      method: "POST",
+      body: JSON.stringify(lendingData),
+    }),
+};
+
+export const inventoryAPI = {
+  getAvailable: () => apiCall("/inventory/available"),
+  getAll: (page = 1, limit = 10) =>
+    apiCall(`/inventory?page=${page}&limit=${limit}`),
+  getById: (id) => apiCall(`/inventory/${id}`),
+  create: (itemData) => {
+    return apiCall("/inventory", {
+      method: "POST",
+      body: JSON.stringify(itemData),
+    });
+  },
+
+  update: (id, itemData) =>
+    apiCall(`/inventory/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(itemData),
+    }),
+
+  delete: (id) =>
+    apiCall(`/inventory/${id}`, {
+      method: "DELETE",
+    }),
+};
+
+export const classAPI = {
+  getClasses: () => apiCall("/admin/classes-overview"),
+  getClassDetails: (id) => apiCall(`/admin/classes/${id}`),
+};
+
+export const dropdownAPI = {
+  getClasses: () => apiCall("/admin/classes"),
+  getRooms: () => apiCall("/admin/rooms"),
+  getLecturers: () => apiCall("/admin/lecturers"),
+  getProgramStudies: () => apiCall("/admin/program-studies"),
+  getActive: () => apiCall("/admin/schedule-active"),
+  getAvailable: () => apiCall("/inventory/available"),
+};
+
+export const uploadStudentPhoto = async (nim, blob) => {
+  const formData = new FormData();
+  formData.append("foto", blob, "kartu.jpg");
+  
+  const token = localStorage.getItem("token");
+  const response = await fetch(`${BASE_API_URL}/borrow/upload-kartu/${nim}`, {
+    method: "POST",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  return await response.json();
+};

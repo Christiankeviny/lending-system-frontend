@@ -1,7 +1,6 @@
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AdminHistoryLog from "./pages/AdminHistoryLog.jsx";
 import AdminClassLog from "./pages/AdminClassLog.jsx";
-
 import AdminInventory from "./pages/AdminInventory.jsx";
 import {
   Navigate,

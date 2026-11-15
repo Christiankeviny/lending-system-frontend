@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "./TranslationContext.jsx";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import SearchableSelect from "./SearchableSelect.jsx";
 
 export default function LowStockItems({ lowStockItems }) {
@@ -33,6 +33,7 @@ export default function LowStockItems({ lowStockItems }) {
     id: item.id,
   }));
 
+  const totalItems = data.reduce((acc, curr) => acc + curr.value, 0);
   const activeDataInfo = activeCategory ? data.find(d => d.id === activeCategory) : null;
 
   let activeBreakdown = [];
@@ -77,6 +78,20 @@ export default function LowStockItems({ lowStockItems }) {
               <div className="w-1/2 h-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const { name, value, color } = payload[0].payload;
+                          const percentage = totalItems > 0 ? ((value / totalItems) * 100).toFixed(0) : 0;
+                          return (
+                            <div className="bg-white p-2 border border-gray-200 shadow-lg rounded-md text-sm z-50">
+                              <p className="font-medium text-gray-900">{percentage}%</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
                     <Pie
                       data={data}
                       cx="50%"

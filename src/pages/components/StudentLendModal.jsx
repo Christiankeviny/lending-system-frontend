@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { dropdownAPI, inventoryAPI } from "../../utils/api.mjs";
+import { dropdownAPI, inventoryAPI, borrowAPI } from "../../utils/api.mjs";
 import { useTranslation } from "./TranslationContext.jsx";
 import SearchableSelect from "./SearchableSelect.jsx";
+import { auth } from "../../utils/firebase.mjs";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 
 const StudentLendModal = ({
   isOpen,
@@ -21,6 +23,97 @@ const StudentLendModal = ({
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [fetchError, setFetchError] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [isSignUpOpen, setIsSignUpOpen] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [signUpStep, setSignUpStep] = useState("form");
+  const [signUpData, setSignUpData] = useState({
+    nama_mahasiswa: "",
+    nim_mahasiswa: "",
+    nama_prodi: "",
+    email: "",
+  });
+
+  const handleSignUpSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!signUpData.email.endsWith("@mhsw.pnj.ac.id")) {
+      alert("Gunakan email kampus mahasiswa PNJ (@mhsw.pnj.ac.id)");
+      return;
+    }
+
+    try {
+      setIsSigningUp(true);
+      const tempPassword = `PNJ_verify_${signUpData.nim_mahasiswa}_2026!`;
+
+      let userCredential;
+      try {
+        userCredential = await createUserWithEmailAndPassword(auth, signUpData.email, tempPassword);
+      } catch (firebaseError) {
+        if (firebaseError.code === "auth/email-already-in-use") {
+          userCredential = await signInWithEmailAndPassword(auth, signUpData.email, tempPassword);
+        } else {
+          throw firebaseError;
+        }
+      }
+
+      const user = userCredential.user;
+
+      if (user.emailVerified) {
+        const idToken = await user.getIdToken();
+        await borrowAPI.signUpStudent({ ...signUpData, firebaseToken: idToken });
+        alert("Mahasiswa berhasil didaftarkan!");
+        handleCloseSignUp();
+      } else {
+        await sendEmailVerification(user);
+        setSignUpStep("verify");
+      }
+    } catch (error) {
+      let msg = error.message;
+      if (error.code === "auth/invalid-email") msg = "Format email tidak valid";
+      if (error.code === "auth/weak-password") msg = "Password terlalu lemah";
+      if (error.code === "auth/invalid-credential") msg = "Email sudah terdaftar di Firebase dengan data berbeda. Hubungi admin.";
+      alert("Gagal mendaftar: " + msg);
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
+
+  const handleVerifyConfirm = async () => {
+    try {
+      setIsSigningUp(true);
+      await auth.currentUser.reload();
+
+      if (auth.currentUser.emailVerified) {
+        const idToken = await auth.currentUser.getIdToken(true);
+        await borrowAPI.signUpStudent({ ...signUpData, firebaseToken: idToken });
+        alert("Email terverifikasi! Mahasiswa berhasil didaftarkan.");
+        handleCloseSignUp();
+      } else {
+        alert("Email belum diverifikasi. Silakan cek email Anda dan klik link verifikasi terlebih dahulu.");
+      }
+    } catch (error) {
+      alert("Gagal: " + error.message);
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+        alert("Email verifikasi telah dikirim ulang!");
+      }
+    } catch (error) {
+      alert("Gagal mengirim ulang: " + error.message);
+    }
+  };
+
+  const handleCloseSignUp = () => {
+    setIsSignUpOpen(false);
+    setSignUpStep("form");
+    setSignUpData({ nama_mahasiswa: "", nim_mahasiswa: "", nama_prodi: "", email: "" });
+  };
 
   const { t } = useTranslation();
 
@@ -375,9 +468,126 @@ const StudentLendModal = ({
                 {t("modal.submitBorrow")}
               </button>
             </div>
+            
+            <div className="text-center pt-3 border-t mt-4 border-gray-200">
+              <button
+                type="button"
+                onClick={() => setIsSignUpOpen(true)}
+                className="text-sm font-medium transition-colors hover:opacity-80"
+                style={{ color: "#048494" }}
+              >
+                Belum terdaftar? Daftar disini
+              </button>
+            </div>
+
           </form>
         </div>
       </div>
+
+      {isSignUpOpen && (
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-lg w-full max-w-md p-6 relative shadow-xl">
+            <button
+              onClick={handleCloseSignUp}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {signUpStep === "form" ? (
+              <>
+                <h3 className="text-lg font-semibold mb-4" style={{ color: "#036570" }}>Daftar Mahasiswa Baru</h3>
+                <form onSubmit={handleSignUpSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">NIM</label>
+                    <input
+                      type="number"
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
+                      style={{ '--tw-ring-color': '#048494' }}
+                      value={signUpData.nim_mahasiswa}
+                      onChange={(e) => setSignUpData({...signUpData, nim_mahasiswa: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama Mahasiswa</label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
+                      style={{ '--tw-ring-color': '#048494' }}
+                      value={signUpData.nama_mahasiswa}
+                      onChange={(e) => setSignUpData({...signUpData, nama_mahasiswa: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Program Studi</label>
+                    <input
+                      type="text"
+                      placeholder="BM2B atau TT22B"
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
+                      style={{ '--tw-ring-color': '#048494' }}
+                      value={signUpData.nama_prodi}
+                      onChange={(e) => setSignUpData({...signUpData, nama_prodi: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Kampus</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="nama@mhsw.pnj.ac.id"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
+                      style={{ '--tw-ring-color': '#048494' }}
+                      value={signUpData.email}
+                      onChange={(e) => setSignUpData({...signUpData, email: e.target.value})}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Gunakan email kampus mahasiswa PNJ (@mhsw.pnj.ac.id)</p>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSigningUp}
+                    className="w-full py-2.5 px-4 text-white rounded-md hover:opacity-90 transition-all font-medium disabled:opacity-50 mt-2"
+                    style={{ backgroundColor: "#048494" }}
+                  >
+                    {isSigningUp ? "Mengirim Verifikasi..." : "Daftar"}
+                  </button>
+                </form>
+              </>
+            ) : (
+              <div className="text-center py-4">
+                <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: "#e6f7f9" }}>
+                  <svg className="w-8 h-8" style={{ color: "#048494" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold mb-2" style={{ color: "#036570" }}>Cek Email Anda</h3>
+                <p className="text-sm text-gray-600 mb-1">Link verifikasi telah dikirim ke:</p>
+                <p className="text-sm font-semibold text-gray-800 mb-4">{signUpData.email}</p>
+                <p className="text-xs text-gray-500 mb-6">Buka email Anda dan klik link verifikasi dari Firebase. Setelah itu, kembali ke sini dan klik tombol di bawah.</p>
+                <button
+                  onClick={handleVerifyConfirm}
+                  disabled={isSigningUp}
+                  className="w-full py-2.5 px-4 text-white rounded-md hover:opacity-90 transition-all font-medium disabled:opacity-50"
+                  style={{ backgroundColor: "#048494" }}
+                >
+                  {isSigningUp ? "Memeriksa..." : "Saya Sudah Verifikasi Email"}
+                </button>
+                <button
+                  onClick={handleResendVerification}
+                  className="w-full py-2 px-4 text-sm font-medium mt-3 transition-colors hover:opacity-80"
+                  style={{ color: "#048494" }}
+                >
+                  Kirim Ulang Email Verifikasi
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

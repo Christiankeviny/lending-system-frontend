@@ -8,7 +8,7 @@ const BorrowerPhotoModal = ({ isOpen, onClose, nim, borrowerName }) => {
 
   // We point the image source directly to our backend API route
   // The browser will automatically make a GET request to fetch the image!
-  const photoUrl = `http://${window.location.hostname}:3000/api/borrow/student-photo/${nim}`;
+  const photoUrl = `${import.meta.env.VITE_API_URL}/borrow/student-photo/${nim}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">

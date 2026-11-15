@@ -23,6 +23,9 @@ const AdminHistoryLog = () => {
   const [notes, setNotes] = useState("");
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [photoModalData, setPhotoModalData] = useState({ nim: null, name: "" });
+  const [searchName, setSearchName] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [overdueDate, setOverdueDate] = useState("");
 
   const { t } = useTranslation();
 
@@ -31,7 +34,11 @@ const AdminHistoryLog = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await dashboardAPI.getHistoryLog(currentPage, itemsPerPage);
+      const data = await dashboardAPI.getHistoryLog(currentPage, itemsPerPage, {
+        searchName,
+        status: statusFilter,
+        overdueDate
+      });
       if (data.success) {
         setHistoryData(data.data);
         setTotalPages(data.pagination?.total_pages);
@@ -92,7 +99,7 @@ const AdminHistoryLog = () => {
   // fetch history log data on mount and when page changes
   useEffect(() => {
     fetchHistoryData();
-  }, [currentPage]);
+  }, [currentPage, searchName, statusFilter, overdueDate]);
 
   // socket io setup for realtime updates
   useEffect(() => {
@@ -204,8 +211,59 @@ const AdminHistoryLog = () => {
         <Header searchPlaceholder={t("historyLog.search")} />
         <div className="flex-1 overflow-y-auto">
           <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
               <h1 className="text-2xl font-semibold text-gray-900">{t("historyLog.title")}</h1>
+              
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <input 
+                  type="text" 
+                  placeholder="Cari nama peminjam..." 
+                  className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={searchName}
+                  onChange={(e) => setSearchName(e.target.value)}
+                />
+                
+                {/* Status Filters */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  <button
+                    onClick={() => {
+                      setStatusFilter("");
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                      statusFilter === ""
+                        ? "bg-gray-100 border-gray-400 shadow-inner font-bold text-gray-700"
+                        : "bg-white border-gray-200 hover:bg-gray-50 text-gray-700"
+                    }`}
+                  >
+                    Semua
+                  </button>
+                  {["dipinjam", "dikembalikan", "terlambat"].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => {
+                        setStatusFilter(status);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border capitalize ${
+                        statusFilter === status
+                          ? `bg-gray-100 border-gray-400 shadow-inner font-bold ${getStatusColor(status)}`
+                          : `bg-white border-gray-200 hover:bg-gray-50 ${getStatusColor(status)}`
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+
+                <input 
+                  type="date" 
+                  className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={overdueDate}
+                  onChange={(e) => setOverdueDate(e.target.value)}
+                  title="Filter Tanggal Tenggat Pengembalian"
+                />
+              </div>
             </div>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="overflow-x-auto">

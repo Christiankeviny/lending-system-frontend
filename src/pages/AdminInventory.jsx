@@ -14,6 +14,7 @@ const AdminInventory = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [activeFilters, setActiveFilters] = useState([]);
   const itemsPerPage = 10;
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -25,7 +26,7 @@ const AdminInventory = () => {
       setLoading(true);
       setError(null);
 
-      const data = await inventoryAPI.getAll(currentPage, itemsPerPage);
+      const data = await inventoryAPI.getAll(currentPage, itemsPerPage, activeFilters);
       
       if (data.success) {
         setInventoryData(data.data || []);
@@ -73,7 +74,7 @@ const AdminInventory = () => {
   // fetch inventory data
   useEffect(() => {
     fetchInventoryData();
-  }, [currentPage]);
+  }, [currentPage, activeFilters]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -149,6 +150,41 @@ const AdminInventory = () => {
                     {t("inventory.addProduct")}
                   </button>
                 </div>
+              </div>
+
+              {/* Status Filters */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {["tersedia", "dipinjam", "diperbaiki", "rusak", "hilang"].map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => {
+                      setActiveFilters((prev) =>
+                        prev.includes(status)
+                          ? prev.filter((s) => s !== status)
+                          : [...prev, status]
+                      );
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                      activeFilters.includes(status)
+                        ? `bg-gray-100 border-gray-400 shadow-inner font-bold ${getStatusColor(status)}`
+                        : `bg-white border-gray-200 hover:bg-gray-50 ${getStatusColor(status)}`
+                    }`}
+                  >
+                    {getStatusText(status)}
+                  </button>
+                ))}
+                {activeFilters.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setActiveFilters([]);
+                      setCurrentPage(1);
+                    }}
+                    className="px-3 py-1.5 rounded-full text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    {t("inventory.clearFilters")}
+                  </button>
+                )}
               </div>
 
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">

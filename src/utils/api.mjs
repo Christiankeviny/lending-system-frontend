@@ -12,6 +12,7 @@ export const apiCall = async (endpoint, options = {}) => {
   const url = `${BASE_API_URL}${endpoint}`;
   const config = {
     headers: getAuthHeaders(),
+    cache: "no-store",
     ...options,
   };
 
@@ -63,8 +64,13 @@ export const dashboardAPI = {
   getClassesTable: (page = 1, limit = 10) =>
     apiCall(`/admin/classes-table?page=${page}&limit=${limit}`),
   getCurrentLoans: () => apiCall("/admin/current-loans"),
-  getHistoryLog: (page = 1, limit = 10) =>
-    apiCall(`/admin/history-log?page=${page}&limit=${limit}`),
+  getHistoryLog: (page = 1, limit = 10, filters = {}) => {
+    let url = `/admin/history-log?page=${page}&limit=${limit}`;
+    if (filters.searchName) url += `&searchName=${encodeURIComponent(filters.searchName)}`;
+    if (filters.status) url += `&status=${encodeURIComponent(filters.status)}`;
+    if (filters.overdueDate) url += `&overdueDate=${encodeURIComponent(filters.overdueDate)}`;
+    return apiCall(url);
+  },
   importMahasiswa: (formData) => {
     const token = localStorage.getItem("token");
     return fetch(`${BASE_API_URL}/admin/import-excel`, {
@@ -112,6 +118,11 @@ export const dashboardAPI = {
 };
 
 export const borrowAPI = {
+  signUpStudent: (data) =>
+    apiCall("/borrow/signup-student", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   submitRequest: (requestData) =>
     apiCall("/borrow/request", {
       method: "POST",
@@ -148,8 +159,8 @@ export const borrowAPI = {
 
 export const inventoryAPI = {
   getAvailable: () => apiCall("/inventory/available"),
-  getAll: (page = 1, limit = 10) =>
-    apiCall(`/inventory?page=${page}&limit=${limit}`),
+  getAll: (page = 1, limit = 10, statuses = []) =>
+    apiCall(`/inventory?page=${page}&limit=${limit}${statuses.length ? '&status=' + statuses.join(',') : ''}`),
   getById: (id) => apiCall(`/inventory/${id}`),
   create: (itemData) => {
     return apiCall("/inventory", {
@@ -198,4 +209,8 @@ export const uploadStudentPhoto = async (nim, blob) => {
   });
 
   return await response.json();
+};
+
+export const notificationAPI = {
+  subscribe: (data) => apiCall('/notifications/subscribe', { method: 'POST', body: JSON.stringify(data) }),
 };

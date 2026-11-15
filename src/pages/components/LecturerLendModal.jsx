@@ -11,6 +11,7 @@ const LectureLendModal = ({
   borrowerData,
   modalType,
   setModalType,
+  isAdmin = false,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [mataKuliah, setMataKuliah] = useState([]);
@@ -202,20 +203,23 @@ const LectureLendModal = ({
                 required
               />
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                {t("modal.lecturerNip")}
-              </label>
-              <input
-                type="text"
-                name="nip_dosen"
-                value={formData.nip_dosen}
-                onChange={handleInputChange}
-                placeholder={t("modal.lecturerNipPlaceholder")}
-                className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
+
+            {!isAdmin && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  {t("modal.lecturerNip")}
+                </label>
+                <input
+                  type="text"
+                  name="nip_dosen"
+                  value={formData.nip_dosen}
+                  onChange={handleInputChange}
+                  placeholder={t("modal.lecturerNipPlaceholder")}
+                  className="w-full px-3 py-2.5 text-base md:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required={!isAdmin}
+                />
+              </div>
+            )}
 
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">
@@ -230,18 +234,20 @@ const LectureLendModal = ({
               />
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                {t("modal.course")}
-              </label>
-              <SearchableSelect
-                options={mataKuliah.map((mk) => ({ value: mk.nama_kelas, label: mk.nama_kelas }))}
-                value={formData.kelas}
-                onChange={(val) => setFormData((prev) => ({ ...prev, kelas: val }))}
-                placeholder={t("modal.coursePlaceholder")}
-                required
-              />
-            </div>
+            {!isAdmin && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  {t("modal.course")}
+                </label>
+                <SearchableSelect
+                  options={mataKuliah.map((mk) => ({ value: mk.nama_kelas, label: mk.nama_kelas }))}
+                  value={formData.kelas}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, kelas: val }))}
+                  placeholder={t("modal.coursePlaceholder")}
+                  required={!isAdmin}
+                />
+              </div>
+            )}
 
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">
@@ -280,34 +286,38 @@ const LectureLendModal = ({
               )}
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                {t("modal.scheduleStart")}
-              </label>
-              <SearchableSelect
-                options={schedules.map((schedule) => ({
-                  value: schedule.id_jadwal,
-                  label: `${schedule.hari_dalam_seminggu} ${schedule.waktu_mulai}-${schedule.waktu_berakhir} | ${schedule.nama_kelas} | ${schedule.nama_dosen}`
-                }))}
-                value={formData.jadwal_id}
-                onChange={handleScheduleSelect}
-                placeholder={t("modal.schedulePlaceholder")}
-                required
-              />
-            </div>
+            {!isAdmin && (
+              <>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    {t("modal.scheduleStart")}
+                  </label>
+                  <SearchableSelect
+                    options={schedules.map((schedule) => ({
+                      value: schedule.id_jadwal,
+                      label: `${schedule.hari_dalam_seminggu} ${schedule.waktu_mulai}-${schedule.waktu_berakhir} | ${schedule.nama_kelas} | ${schedule.nama_dosen}`
+                    }))}
+                    value={formData.jadwal_id}
+                    onChange={handleScheduleSelect}
+                    placeholder={t("modal.schedulePlaceholder")}
+                    required={!isAdmin}
+                  />
+                </div>
 
-            {selectedSchedule && (
-              <div className="bg-blue-50 p-3 rounded-md">
-                <p className="text-sm text-blue-800">
-                  <strong>{t("modal.scheduleDetail")}</strong>
-                  <br />
-                  {t("modal.detailLecturer")} {selectedSchedule.nama_dosen}
-                  <br />
-                  {t("modal.detailStart")} {selectedSchedule.waktu_mulai}
-                  <br />
-                  {t("modal.detailEnd")} {selectedSchedule.waktu_berakhir}
-                </p>
-              </div>
+                {selectedSchedule && (
+                  <div className="bg-blue-50 p-3 rounded-md">
+                    <p className="text-sm text-blue-800">
+                      <strong>{t("modal.scheduleDetail")}</strong>
+                      <br />
+                      {t("modal.detailLecturer")} {selectedSchedule.nama_dosen}
+                      <br />
+                      {t("modal.detailStart")} {selectedSchedule.waktu_mulai}
+                      <br />
+                      {t("modal.detailEnd")} {selectedSchedule.waktu_berakhir}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
 
             <div>

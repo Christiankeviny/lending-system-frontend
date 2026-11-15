@@ -6,6 +6,7 @@ import { useSocket } from "../../utils/socket.jsx";
 import StudentLendModal from "./StudentLendModal.jsx";
 import LecturerLendModal from "./LecturerLendModal.jsx";
 import { useTranslation } from "./TranslationContext.jsx";
+import { subscribeToPushNotifications } from "../../utils/pushNotification.mjs";
 
 const BorrowPage = () => {
   const navigate = useNavigate();
@@ -138,6 +139,7 @@ const BorrowPage = () => {
           nim_mahasiswa: formData.nim_mahasiswa,
         });
         joinStudentRoom(formData.nim_mahasiswa);
+        subscribeToPushNotifications(formData.nim_mahasiswa, "student");
       } else if (modalType === "lecturer") {
         requestData.nama_dosen = formData.nama_dosen;
         requestData.nip_dosen = formData.nip_dosen;
@@ -146,6 +148,7 @@ const BorrowPage = () => {
           nip_dosen: formData.nip_dosen,
         });
         joinStudentRoom(formData.nip_dosen);
+        subscribeToPushNotifications(formData.nip_dosen, "lecturer");
       }
 
       const response = await borrowAPI.submitRequest(requestData);

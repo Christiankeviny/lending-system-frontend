@@ -78,3 +78,5 @@ This is a full-stack application designed to manage the borrowing and returning 
 ## 5. Next Possible Features/Improvements
 *   **Automated Notifications:** Send email or WhatsApp reminders for overdue items.
 *   **Full `nodemailer` Integration**: Replace the `console.log` mock for password resets with a real email-sending implementation using a service like Gmail or SendGrid.
+
+agy --conversation=35b38af0-6561-43b1-b14c-f79f447ab7af

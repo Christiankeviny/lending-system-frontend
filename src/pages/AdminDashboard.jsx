@@ -154,12 +154,23 @@ const AdminDashboard = () => {
 
   const handleDirectLending = async (formData) => {
     try {
+      let lastTransactionId = null;
       for (const item of formData.items) {
-        await borrowAPI.directLending({ ...formData, id_barang: item.id_barang });
+        const response = await borrowAPI.directLending({ ...formData, id_barang: item.id_barang });
+        const tid = response?.data?.id_transaksi || response?.id_transaksi || response?.data?.transactionId || response?.transactionId || response?.data?.transaction_id || response?.transaction_id || response?.data?.id || response?.id;
+        if (tid) {
+          lastTransactionId = tid;
+        }
       }
       alert(t("dashboard.directLendingSuccess"));
       setLendModalOpen(false);
-      window.location.reload();
+      
+      if (lastTransactionId) {
+        setSelectedTransactionId(lastTransactionId);
+        setShowBarcodeScanner(true);
+      } else {
+        window.location.reload();
+      }
     } catch (error) {
       console.error("Error direct lending: ", error);
       alert(t("dashboard.directLendingError") + error.message);
@@ -245,6 +256,7 @@ const AdminDashboard = () => {
             modalType={modalType}
             setModalType={setModalType}
             borrowerData={borrowerData}
+            isAdmin={true}
           />
         ))}
 
